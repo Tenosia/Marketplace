@@ -12,7 +12,7 @@ const Herosection = () => {
                     NFT marketplace UI created with Anima for Figma. Collect, buy and sell art from more than 20k NFT artists.
                 </p>
                 <Button
-                    onClick={() => console.log("Button clicked")}
+                    onClick={() => {}}
                     variant="primary"
                     sxclass="px-8 w-fit"
                     size="lg"

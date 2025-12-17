@@ -27,7 +27,6 @@ const signupUser = async (req, res, next) => {
         lastname,
         refCode
     } = req.body;
-    console.log({username, email, password, firstname, lastname, refCode});
 
     try{ 
         // validating the data from the frontend
@@ -64,7 +63,8 @@ const signupUser = async (req, res, next) => {
         const newUser = new User({
             username,
             email,
-            fullname: '', 
+            firstName: firstname || '',
+            lastName: lastname || '',
             password: hashedPassword        
         });
 
@@ -176,7 +176,8 @@ const signinUser = async (req, res, next) => {
             // generate Access Token 
             generateToken(res, user._id); 
 
-           const { username, fullname, profile_img, role } = user
+           const { username, firstName, lastName, profile_img, role } = user;
+           const fullname = `${firstName || ''} ${lastName || ''}`.trim() || username;
             // const expiryTime = new Date(Date.now() + 360000) //1 hour
             return res.status(200).json({
                 success: true,
@@ -434,10 +435,11 @@ const googleAuth = async (req, res, next) => {
 
         if (user) {
             // Check if the existing user was not signed up with Google
-            if (!user.google_auth) {
-                next(handleError(403, "This email was signed up without Google. Please log in with password to access the account"));
+            if (!user.isGoogleAuth) {
+                return next(handleError(403, "This email was signed up without Google. Please log in with password to access the account"));
             }else{    
-                const {_id:userId, username, profile_img, fullname, role } = user            
+                const {_id:userId, username, profile_img, firstName, lastName, role } = user;
+                const fullname = `${firstName || ''} ${lastName || ''}`.trim() || username;            
                  // generate an access token
                 generateToken(res, userId);
                 
@@ -460,8 +462,13 @@ const googleAuth = async (req, res, next) => {
             // If user does not exist, create a new user with Google authentication            
             const username = name.split(" ").join("").toLowerCase() + Math.random().toString(36).slice(-8);
 
+            const nameParts = name.split(' ');
+            const firstName = nameParts[0] || '';
+            const lastName = nameParts.slice(1).join(' ') || '';
+            
             user = new User({
-                fullname: name,
+                firstName,
+                lastName,
                 username,
                 email,
                 profile_img: photo,
@@ -535,8 +542,8 @@ const verifyUser = async (req, res, next) => {
         // Delete verification token from the database
         await VerificationToken.deleteOne({ owner: userId  });
 
-        // const { personal_info: { username:user_username, profile_img}, role, _id, verified} = user;
-        const {fullname, username, email, profile_img, isVerified, role, _id} = user;
+        const {firstName, lastName, username, email, profile_img, isVerified, role, _id} = user;
+        const fullname = `${firstName || ''} ${lastName || ''}`.trim() || username;
 
         generateToken(res, _id);
 
@@ -575,7 +582,12 @@ const readCookies= async (req, res, next) => {
             // Get user from the token
             const user = await User.findById(decoded.userId).select('-password');
 
-            const {personal_info: {fullname, username, email, profile_img}, isVerified, role, _id} = user;
+            if (!user) {
+                return next(handleError(401, 'User not found'));
+            }
+
+            const {firstName, lastName, username, email, profile_img, isVerified, role, _id} = user;
+            const fullname = `${firstName || ''} ${lastName || ''}`.trim() || username;
 
             // run the next middleware
             return res.status(200).json({

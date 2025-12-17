@@ -29,17 +29,15 @@ const LoginPage = () => {
 
   const validate = () => {
     const errors:LoginValidationErrors = {};
-    ;
   
     if (!formData.email.trim()) errors.email = 'email is required';
     if (!formData.password.trim()) errors.password = 'Password is required';  
   
-    console.log(errors); // Log errors to debug
     return errors;
   };
 
-    const [googleLoading, setGoogleLoading] = useState<boolean>(false);
-    const baseUrl = import.meta.env.VITE_BASE_URL || 'http://localhost:3000';
+  const [googleLoading, setGoogleLoading] = useState<boolean>(false);
+  const baseUrl = import.meta.env.VITE_BASE_URL || 'http://localhost:5000/api';
   
     const location = useLocation();
     const navigate = useNavigate();
@@ -54,35 +52,61 @@ const LoginPage = () => {
     const refCode = getQueryParam("refCode");
 
 
-  const signInWithGoogle = () => {
+  const signInWithGoogle = async () => {
     setGoogleLoading(true);
-    fetch(`${baseUrl}/auth/register/google`, {
-      method: "GET",
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setGoogleLoading(false);
-        // console.log(data);
-        if (data.success) {
-          if (typeof window !== "undefined" && data.url) {
-            window.location.replace(data.url);
-          }
-        }
+    try {
+      const response = await fetch(`${baseUrl}/auth/register/google`, {
+        method: "GET",
+        credentials: 'include',
       });
+      const data = await response.json();
+      setGoogleLoading(false);
+      if (data.success && typeof window !== "undefined" && data.url) {
+        window.location.replace(data.url);
+      }
+    } catch (error) {
+      setGoogleLoading(false);
+      // Error handling can be improved with toast notifications
+    }
   };
 
-     const login = (e: React.FormEvent) => {
-        e.preventDefault();
-        alert("Signup function not implemented yet");
+  const login = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const validationErrors = validate();
+    
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
     }
-    console.log({
-      fromValue, 
-      refCode, 
-      navigate, 
-      googleLoading, 
-      validate, 
-      setLoading
-    });
+    
+    setLoading(true);
+    try {
+      const response = await fetch(`${baseUrl}/auth/signin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+      
+      const data = await response.json();
+      setLoading(false);
+      
+      if (data.success) {
+        const redirectTo = fromValue || '/';
+        navigate(redirectTo);
+      } else {
+        setErrors({ email: data.message || 'Login failed' });
+      }
+    } catch (error) {
+      setLoading(false);
+      setErrors({ email: 'An error occurred. Please try again.' });
+    }
+  };
   return (
     <AuthPageWrapper
       details={{

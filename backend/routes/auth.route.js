@@ -45,7 +45,7 @@ router.get('/:id/verify/:token', verifyUser);
 // Create or Reset Session
 router.get('/resendOTP', resendOTP);
 
-// Google Auth
+// Google Auth (POST for OAuth callback with user data)
 router.post('/google-auth', googleAuth);
 
 // private routes

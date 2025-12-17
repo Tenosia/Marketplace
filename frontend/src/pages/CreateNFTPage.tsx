@@ -132,11 +132,7 @@ const CreateNFTPage: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Here you would handle the NFT creation/minting process
-    console.log('NFT Data:', {
-      file,
-      formData,
-      properties
-    });
+    // TODO: Implement NFT creation/minting logic
   };
 
   return (

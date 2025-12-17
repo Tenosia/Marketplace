@@ -1,37 +1,44 @@
 // Import required modules using ES module syntax
-import dotenv from 'dotenv'; // Loads environment variables from .env file
-import express from 'express'; // Express framework for building APIs
-import mongoose from 'mongoose'; // MongoDB ODM
-import cors from 'cors'; // Enables Cross-Origin Resource Sharing
-import path from 'path'
+import dotenv from 'dotenv';
+import express from 'express';
+import mongoose from 'mongoose';
+import cors from 'cors';
+import path from 'path';
 import cookieParser from 'cookie-parser';
 import bodyParser from 'body-parser';
 
 // Import route modules
-import authRoutes from './routes/auth.route.js'; // Auth routes (signup, login)
+import authRoutes from './routes/auth.route.js';
 import { errorHandler } from './middleware/error.middleware.js';
 
-// This enables us to read the content of the .env file
+// Load environment variables
 dotenv.config({ path: './.env.local' });
 const __dirname = path.resolve();
 
 // Create Express app
 const app = express();
 
+// Security: Trust proxy for accurate IP addresses
+app.set('trust proxy', 1);
 
-//this middleware helps the backend receive json data from the frontend
-// Parse incoming JSON requests
-app.use(express.json());
-app.use(express.urlencoded({extended: true}));
+// Parse incoming JSON requests with size limit
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Use cookie-parser middleware to parse cookies
 app.use(cookieParser());
 
-// Set payload size limit
+// Set payload size limit for body-parser
 app.use(bodyParser.json({ limit: '10mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
-// Enable CORS for all requests
-app.use(cors());
+// CORS configuration
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,
+  optionsSuccessStatus: 200,
+};
+app.use(cors(corsOptions));
 
 app.use(express.static(path.join(__dirname, '/frontend/dist')));
 
@@ -52,14 +59,20 @@ app.use(errorHandler);
 
 // Start the Express server
 const PORT = process.env.PORT || 5000;
+
 // Connect to MongoDB database
-mongoose.connect(process.env.MONGO_URI, {autoIndex:true})
-.then(() => {
-    console.log('connected to database');
-  
-    //listen for requests after connections has been made to the database
-    app.listen(PORT, () => {
-        console.log(`server started listening on port ${PORT}`);
-    })
+mongoose.connect(process.env.MONGO_URI, {
+  autoIndex: process.env.NODE_ENV !== 'production',
 })
-.catch(err => console.log('error', err));
+.then(() => {
+    console.log('Connected to database');
+  
+    // Listen for requests after connection has been made to the database
+    app.listen(PORT, () => {
+        console.log(`Server started listening on port ${PORT}`);
+    });
+})
+.catch(err => {
+    console.error('Database connection error:', err);
+    process.exit(1);
+});
